@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTube</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .video { margin-bottom: 20px; }
+        video { max-width: 100%; }
+        .comments { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>MyTube - Video Platform</h1>
+
+    <!-- Upload Form -->
+    <form id="uploadForm">
+        <input type="text" name="title" placeholder="Video Title" required>
+        <input type="text" name="description" placeholder="Video Description" required>
+        <input type="file" name="video" accept="video/*" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <h2>Videos</h2>
+    <div id="videos"></div>
+
+    <script>
+        const loadVideos = async () => {
+            const response = await fetch('/videos');
+            const videos = await response.json();
+            const container = document.getElementById('videos');
+            container.innerHTML = videos.map(video => `
+                <div class="video">
+                    <video controls src="/uploads/${video.filePath}"></video>
+                    <h3>${video.title}</h3>
+                    <p>${video.description}</p>
+                    <button onclick="likeVideo('${video._id}')">Like (${video.likes})</button>
+                    <div class="comments">
+                        <h4>Comments</h4>
+                        <ul>${video.comments.map(c => `<li>${c.user}: ${c.text}</li>`).join('')}</ul>
+                        <form onsubmit="addComment(event, '${video._id}')">
+                            <input type="text" name="user" placeholder="Your name" required>
+                            <input type="text" name="text" placeholder="Your comment" required>
+                            <button type="submit">Add Comment</button>
+                        </form>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        const likeVideo = async (id) => {
+            await fetch(`/like/${id}`, { method: 'POST' });
+            loadVideos();
+        };
+
+        const addComment = async (event, id) => {
+            event.preventDefault();
+            const form = event.target;
+            const data = new FormData(form);
+            await fetch(`/comment/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.fromEntries(data))
+            });
+            loadVideos();
+        };
+
+        document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const data = new FormData(form);
+            await fetch('/upload', { method: 'POST', body: data });
+            form.reset();
+            loadVideos();
+        });
+
+        loadVideos();
+    </script>
+</body>
+</html>
